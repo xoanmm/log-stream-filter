@@ -1,0 +1,47 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+project_name: log-stream-filter
+builds:
+  - id: log-stream-filter
+    binary: log-stream-filter
+    main: cmd/main.go
+    env:
+      - GO111MODULE=on
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
+changelog:
+  sort: desc
+
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: 64-bit
+      darwin: macOS
+
+before:
+  hooks:
+    - go mod tidy
+
+release:
+  github:
+    owner: xoanmm
+    name: log-stream-filter
+
+nfpms:
+  - id: log-stream-filter
+    builds:
+      - log-stream-filter
+    formats:
+      - deb
+    vendor: Xoán Mallón
+    homepage: https://github.com/xoanmm/log-stream-filter
+    maintainer: xoanmmm <xoanmallon@gmail.com>
+    description: filter aws log streams of aws logGroup and save logEvents of each logStreamGroup in one file
