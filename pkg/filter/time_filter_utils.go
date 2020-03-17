@@ -45,5 +45,5 @@ func getTimeStampUnixFromDate(startDate string) int64 {
 }
 
 func getTimeInUTCFromMilliseconds(timestamp int64) string {
-	return time.Unix(0, timestamp * int64(1000000)).UTC().Format(shortDateFormat)
+	return time.Unix(0, timestamp*int64(1000000)).UTC().Format(shortDateFormat)
 }

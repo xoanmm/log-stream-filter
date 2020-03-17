@@ -1,13 +1,14 @@
-// Package main contains code tu run dir-cleaner as a CLI command.
+// Package main contains code tu run logs-stream-filter as a CLI command.
 package main
 
 import (
 	"fmt"
-	"github.com/xoanmm/log-stream-filter/pkg/filter"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/xoanmm/log-stream-filter/pkg/filter"
 
 	"github.com/urfave/cli/v2"
 )
@@ -32,11 +33,11 @@ func main() {
 func buildCLI(app *filter.App) *cli.App {
 	d, _ := time.Parse(time.RFC3339, date)
 	return &cli.App{
-		Name:      "aws-log-filter",
-		Usage:     "retrieves all event logs from all streamLogGroup of a specific logGroup of AWS",
-		Version:   version,
-		Compiled:  d,
-		UsageText: "aws-log-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] " +
+		Name:     "log-stream-filter",
+		Usage:    "retrieves all event logs from all streamLogGroup of a specific logGroup of AWS",
+		Version:  version,
+		Compiled: d,
+		UsageText: "log-stream-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] " +
 			"[--log-stream-filter-position <position>]" +
 			"[--aws-profile <aws-profile>] [--aws-region <aws-region>] " +
 			"[--path <path>] [--start-date <date>] [--end-date <date>]",
@@ -48,60 +49,62 @@ func buildCLI(app *filter.App) *cli.App {
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "log-group",
-				Usage:       "log group name on which all logStreams will be obtained and will apply the filtering",
-				Value:       "my-lo-group",
-				Aliases:     []string{"n"},
+				Name:    "log-group",
+				Usage:   "log group name on which all logStreams will be obtained and will apply the filtering",
+				Value:   "my-lo-group",
+				Aliases: []string{"n"},
 			},
 
 			&cli.StringFlag{
-				Name:        "log-stream-filter",
-				Usage:       "filter to apply on logStreams name to retrieve eventLogs or not",
-				Value:       "service-name-1",
-				Aliases:     []string{"l"},
+				Name:    "log-stream-filter",
+				Usage:   "filter to apply on logStreams name to retrieve eventLogs or not",
+				Value:   "service-name-1",
+				Aliases: []string{"l"},
 			},
 
 			&cli.IntFlag{
-				Name:        "log-stream-filter-position",
-				Usage:       "position in which to apply the log-stream-filter in the logStreams of the logGroup by splitting by the character / (Example of logStreamGroup: " +
+				Name: "log-stream-filter-position",
+				Usage: "position in which to apply the log-stream-filter in the logStreams of the logGroup by splitting by the character / (Example of logStreamGroup: " +
 					"log-group/log-stream-group-prefix/ccc7b271-83ee-4487-b8f0-4246ce2d90ad)",
-				Value:       1,
-				Aliases:     []string{"f"},
+				Value:   1,
+				Aliases: []string{"f"},
 			},
 
 			&cli.StringFlag{
-				Name:        "aws-profile",
-				Usage:       "aws-profile to use for credentials",
-				Value:       "my-profile",
-				Aliases:     []string{"a"},
+				Name:    "aws-profile",
+				Usage:   "aws-profile to use for credentials",
+				Value:   "my-profile",
+				Aliases: []string{"a"},
 			},
 
 			&cli.StringFlag{
-				Name:        "aws-region",
-				Usage:       "aws region to use for call operations to aws sdk",
-				Value:       "us-east-1",
-				Aliases:     []string{"r"},
+				Name:    "aws-region",
+				Usage:   "aws region to use for call operations to aws sdk",
+				Value:   "us-east-1",
+				Aliases: []string{"r"},
 			},
 
 			&cli.StringFlag{
-				Name:        "path",
-				Usage:       "path where to store the logs",
-				Value:       "/tmp/",
-				Aliases:     []string{"p"},
+				Name:    "path",
+				Usage:   "path where to store the logs",
+				Value:   "/tmp/",
+				Aliases: []string{"p"},
 			},
 
 			&cli.StringFlag{
-				Name:    "start-date",
-				Usage:   "filter only from a date specified (UTC format)",
-				Value:   nowDateLessEightHours,
-				Aliases: []string{"s"},
+				Name:        "start-date",
+				Usage:       "filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time)",
+				DefaultText: "$ACTUAL_DATE - 8hours",
+				Value:       nowDateLessEightHours,
+				Aliases:     []string{"s"},
 			},
 
 			&cli.StringFlag{
-				Name:    "end-date",
-				Usage:   "filter only until a date specified (UTC format)",
-				Value:   nowDate,
-				Aliases: []string{"e"},
+				Name:        "end-date",
+				Usage:       "filter only until a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time)",
+				DefaultText: "$ACTUAL_DATE",
+				Value:       nowDate,
+				Aliases:     []string{"e"},
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -109,14 +112,14 @@ func buildCLI(app *filter.App) *cli.App {
 			logGroup := c.String("log-group")
 
 			logsFileGenerated := app.FilterLogs(&filter.Options{
-				LogGroup:	logGroup,
-				AwsProfile: c.String("aws-profile"),
-				AwsRegion:	c.String("aws-region"),
-				LogStreamFilter: c.String("log-stream-filter"),
+				LogGroup:                logGroup,
+				AwsProfile:              c.String("aws-profile"),
+				AwsRegion:               c.String("aws-region"),
+				LogStreamFilter:         c.String("log-stream-filter"),
 				LogStreamFilterPosition: c.Int("log-stream-filter-position"),
-				Path:       path,
-				StartDate:	c.String("start-date"),
-				EndDate:   c.String("end-date"),
+				Path:                    path,
+				StartDate:               c.String("start-date"),
+				EndDate:                 c.String("end-date"),
 			})
 			fmt.Println(len(logsFileGenerated), "files generated for logs of logStreams filtered for logGroup", logGroup)
 			for k := range logsFileGenerated {

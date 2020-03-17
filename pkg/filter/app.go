@@ -1,4 +1,4 @@
-// Package cleaner contains the app with methods to scan and retrieve logs from logGroup.
+// Package filter contains the app with methods to scan and retrieve logs from logGroup.
 package filter
 
 import (
@@ -12,11 +12,11 @@ import (
 // App contains the streamGroup to scan and the streamLogs to get from it
 type App struct{}
 
-// Filter logs creates a sessions of in aws and get all the logStreams for a specific logGroup
+// FilterLogs creates a sessions of in aws and get all the logStreams for a specific logGroup
 func (a *App) FilterLogs(options *Options) map[string][]string {
 	checkArgsConditions(options.StartDate, options.EndDate, options.LogStreamFilterPosition)
-	fmt.Printf("Filtering logs for logGroup %s\n params: " +
-		"[aws-profile %s] [log-stream-filter: %s] [path: %s] " +
+	fmt.Printf("Filtering logs for logGroup %s\n params: "+
+		"[aws-profile %s] [log-stream-filter: %s] [path: %s] "+
 		"[start-date: %s] [end-date: %s]\n",
 		options.LogGroup, options.AwsProfile, options.LogStreamFilter, options.Path, options.StartDate, options.EndDate)
 	sess, _ := createAwsSession(options.AwsProfile, options.AwsRegion)
@@ -90,10 +90,6 @@ func saveLogsToFile(filenameW string, logStreamName string, resp *cloudwatchlogs
 		if *event.IngestionTime <= timestampFromEndDate {
 			log.Println(*event.Message)
 		} else {
-			//fmt.Println("No more log messages will be added to logStream", logStreamName, "file", filenameW,
-			//	"because the date of ingestion of the messages until this one",
-			//	getTimeInUTCFromMilliseconds(*event.IngestionTime),
-			//	"is greater than that marked by the value of the end-date parameter")
 			cont = false
 			break
 		}
@@ -103,6 +99,7 @@ func saveLogsToFile(filenameW string, logStreamName string, resp *cloudwatchlogs
 	return cont
 }
 
+// CheckErr checks if given error is not nil and exit program with signal 1
 func CheckErr(e error, errString string) {
 	if e != nil {
 		fmt.Print(errString)
@@ -125,7 +122,6 @@ func checkArgsConditions(startDate string, endDate string, logStreamPosition int
 func inBetween(i, min, max int) bool {
 	if (i >= min) && (i <= max) {
 		return true
-	} else {
-		return false
 	}
+	return false
 }

@@ -11,7 +11,7 @@ import (
 func getAllLogStreamsOfLogGroup(svc *cloudwatchlogs.CloudWatchLogs, logGroupName string, logStreamFilter string, logStreamFilterPosition int) []*logStreamGroups {
 	fmt.Println("Getting logStreams for logGroup", logGroupName, "applying filter", logStreamFilter)
 	resp, err := svc.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
-		LogGroupName:  aws.String(logGroupName),
+		LogGroupName: aws.String(logGroupName),
 	})
 
 	if err != nil {
@@ -20,12 +20,12 @@ func getAllLogStreamsOfLogGroup(svc *cloudwatchlogs.CloudWatchLogs, logGroupName
 		os.Exit(1)
 	}
 
-	var s[]*logStreamGroups
+	var s []*logStreamGroups
 	s, c, cont := getLogStreamsOfLogGroup(resp, s, logStreamFilter, logStreamFilterPosition)
 	for cont == true {
 		resp, _ := svc.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
-			LogGroupName:  aws.String(logGroupName),
-			NextToken: c,
+			LogGroupName: aws.String(logGroupName),
+			NextToken:    c,
 		})
 		s, c, cont = getLogStreamsOfLogGroup(resp, s, logStreamFilter, logStreamFilterPosition)
 	}
@@ -51,8 +51,7 @@ func getLogEventsForLogStreamCallWithTime(logGroupName string, logStreamName str
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 		StartFromHead: aws.Bool(true),
-		StartTime: aws.Int64(startTime),
-
+		StartTime:     aws.Int64(startTime),
 	})
 	if err != nil {
 		fmt.Println("Got error getting log events:")
@@ -66,9 +65,8 @@ func getLogEventsForLogStreamCallWithNextToken(logGroupName string, logStreamNam
 	resp, err := svc.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
-		NextToken: aws.String(nextToken),
+		NextToken:     aws.String(nextToken),
 		StartFromHead: aws.Bool(true),
-
 	})
 	if err != nil {
 		fmt.Println("Got error getting log events:")

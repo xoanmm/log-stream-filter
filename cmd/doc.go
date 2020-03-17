@@ -1,9 +1,9 @@
 /*
 NAME:
-   aws-log-filter - retrieves all event logs from all streamLogGroup of a specific logGroup of AWS
+   log-stream-filter - retrieves all event logs from all streamLogGroup of a specific logGroup of AWS
 
 USAGE:
-   aws-log-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] [--log-stream-filter-position <position>][--aws-profile <aws-profile>] [--aws-region <aws-region>] [--path <path>] [--start-date <date>] [--end-date <date>]
+   log-stream-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] [--log-stream-filter-position <position>][--aws-profile <aws-profile>] [--aws-region <aws-region>] [--path <path>] [--start-date <date>] [--end-date <date>]
 
 VERSION:
    1.0.0
@@ -21,10 +21,10 @@ GLOBAL OPTIONS:
    --aws-profile value, -a value                 aws-profile to use for credentials (default: "my-profile")
    --aws-region value, -r value                  aws region to use for call operations to aws sdk (default: "us-east-1")
    --path value, -p value                        path where to store the logs (default: "/tmp/")
-   --start-date value, -s value                  filter only from a date specified (UTC format) (default: "03/17/2020 01:59:27")
-   --end-date value, -e value                    filter only until a date specified (UTC format) (default: "03/17/2020 09:59:27")
+   --start-date value, -s value                  filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time) (default: $ACTUAL_DATE - 8hours)
+   --end-date value, -e value                    filter only until a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time) (default: $ACTUAL_DATE)
    --help, -h                                    show help (default: false)
    --version, -v                                 print the version (default: false)
 
- */
+*/
 package main

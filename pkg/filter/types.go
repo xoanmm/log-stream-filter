@@ -30,7 +30,7 @@ type Options struct {
 
 //LogStreamGrups contains information about each LogStreamGroup
 type logStreamGroups struct {
-	CreationTime int64
+	CreationTime  int64
 	LastEventTime int64
-	LogStreamName  string
+	LogStreamName string
 }
