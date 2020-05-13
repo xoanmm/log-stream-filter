@@ -3,6 +3,7 @@ package filter
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -86,11 +87,36 @@ func printFileStoreForLogStream(logStreamName string, logGroupName string, filen
 	}
 }
 
+// CheckIfFileExistsHasContent check if a specific file exists and is not empty
+func CheckIfFileExistsHasContent(file string) (bool, error) {
+	fileExistsAndHasContent := false
+	if _, err := os.Stat(file); err == nil {
+		fi, err := os.Stat(file)
+		if err != nil {
+			return fileExistsAndHasContent, err
+		}
+		// get the size
+		size := fi.Size()
+		if size > 0 {
+			fileExistsAndHasContent = true
+		}
+	}
+	return fileExistsAndHasContent, nil
+}
+
 // GetLengthOfLogsFilesGenerated calculates the number of files on which search results have been stored
-func GetLengthOfLogsFilesGenerated(logsFileGenerated map[string][]string) int {
+func GetLengthOfLogsFilesGenerated(logsFileGenerated map[string][]string) (int, error) {
 	filesGeneratedLength := 0
 	for k, _ := range logsFileGenerated {
-		filesGeneratedLength += len(logsFileGenerated[k])
+		for _, file := range logsFileGenerated[k] {
+			fileHasContent, err := CheckIfFileExistsHasContent(file)
+			if err != nil {
+				return filesGeneratedLength, err
+			}
+			if fileHasContent {
+				filesGeneratedLength += 1
+			}
+		}
 	}
-	return filesGeneratedLength
+	return filesGeneratedLength, nil
 }

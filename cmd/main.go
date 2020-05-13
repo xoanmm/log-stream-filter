@@ -15,7 +15,7 @@ import (
 
 const dateLayout = "01/02/2006 15:04:05"
 
-var version = "1.1.0"
+var version = "1.1.1"
 var date = time.Now().Format(time.RFC3339)
 var now = time.Now().UTC()
 var nowDate = now.Format(dateLayout)
@@ -73,15 +73,15 @@ func buildCLI(app *filter.App) *cli.App {
 			},
 
 			&cli.BoolFlag{
-				Name:	"search-term-search",
-				Usage:	"Indicates if a specific term should be searched for in the logStreams",
+				Name:    "search-term-search",
+				Usage:   "Indicates if a specific term should be searched for in the logStreams",
 				Value:   false,
 				Aliases: []string{"t"},
 			},
 
 			&cli.StringFlag{
-				Name:	"term-to-search",
-				Usage:	"Term used to filter each of the messages found in the logStreams",
+				Name:    "term-to-search",
+				Usage:   "Term used to filter each of the messages found in the logStreams",
 				Value:   " ",
 				Aliases: []string{"T"},
 			},
@@ -132,17 +132,27 @@ func buildCLI(app *filter.App) *cli.App {
 				AwsRegion:               c.String("aws-region"),
 				LogStreamFilter:         c.String("log-stream-filter"),
 				LogStreamFilterPosition: c.Int("log-stream-filter-position"),
-				SearchTermSearch:		 c.Bool("search-term-search"),
-				SearchTerm:				 c.String("term-to-search"),
+				SearchTermSearch:        c.Bool("search-term-search"),
+				SearchTerm:              c.String("term-to-search"),
 				Path:                    path,
 				StartDate:               c.String("start-date"),
 				EndDate:                 c.String("end-date"),
 			})
-			fmt.Println(filter.GetLengthOfLogsFilesGenerated(logsFileGenerated), "files generated for logs of logStreams filtered for logGroup", logGroup)
-			for k, _ := range logsFileGenerated {
+			lengthOfLogsFilesGenerated, err := filter.GetLengthOfLogsFilesGenerated(logsFileGenerated)
+			if err != nil {
+				return err
+			}
+			fmt.Println(lengthOfLogsFilesGenerated, "files generated for logs of logStreams filtered for logGroup", logGroup)
+			for k := range logsFileGenerated {
 				fmt.Printf("Location of files where logs of logStream %s were stored are the following\n", k)
 				for _, file := range logsFileGenerated[k] {
-					fmt.Printf("- %s\n", file)
+					fileHasContent, err := filter.CheckIfFileExistsHasContent(file)
+					if err != nil {
+						return err
+					}
+					if fileHasContent {
+						fmt.Printf("- %s\n", file)
+					}
 				}
 			}
 			return nil

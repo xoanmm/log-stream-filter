@@ -6,7 +6,7 @@ USAGE:
    log-stream-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] [--log-stream-filter-position <position>][--search-term-search <search-term-search>][--term-to-search] <term-to-search>[--aws-profile <aws-profile>] [--aws-region <aws-region>] [--path <path>] [--start-date <date>] [--end-date <date>]
 
 VERSION:
-   1.1.0
+   1.1.1
 
 AUTHOR:
    Xoan Mallon <xoanmallon@gmail.com>
