@@ -15,7 +15,7 @@ import (
 
 const dateLayout = "01/02/2006 15:04:05"
 
-var version = "1.0.0"
+var version = "1.1.0"
 var date = time.Now().Format(time.RFC3339)
 var now = time.Now().UTC()
 var nowDate = now.Format(dateLayout)
@@ -39,6 +39,8 @@ func buildCLI(app *filter.App) *cli.App {
 		Compiled: d,
 		UsageText: "log-stream-filter [--log-group <log-group-name>] [--log-stream-filter <filter>] " +
 			"[--log-stream-filter-position <position>]" +
+			"[--search-term-search <search-term-search>]" +
+			"[--term-to-search] <term-to-search>" +
 			"[--aws-profile <aws-profile>] [--aws-region <aws-region>] " +
 			"[--path <path>] [--start-date <date>] [--end-date <date>]",
 		Authors: []*cli.Author{
@@ -68,6 +70,20 @@ func buildCLI(app *filter.App) *cli.App {
 					"log-group/log-stream-group-prefix/ccc7b271-83ee-4487-b8f0-4246ce2d90ad)",
 				Value:   1,
 				Aliases: []string{"f"},
+			},
+
+			&cli.BoolFlag{
+				Name:	"search-term-search",
+				Usage:	"Indicates if a specific term should be searched for in the logStreams",
+				Value:   false,
+				Aliases: []string{"t"},
+			},
+
+			&cli.StringFlag{
+				Name:	"term-to-search",
+				Usage:	"Term used to filter each of the messages found in the logStreams",
+				Value:   " ",
+				Aliases: []string{"T"},
 			},
 
 			&cli.StringFlag{
@@ -110,20 +126,24 @@ func buildCLI(app *filter.App) *cli.App {
 		Action: func(c *cli.Context) error {
 			path, _ := filepath.Abs(c.String("path"))
 			logGroup := c.String("log-group")
-
 			logsFileGenerated := app.FilterLogs(&filter.Options{
 				LogGroup:                logGroup,
 				AwsProfile:              c.String("aws-profile"),
 				AwsRegion:               c.String("aws-region"),
 				LogStreamFilter:         c.String("log-stream-filter"),
 				LogStreamFilterPosition: c.Int("log-stream-filter-position"),
+				SearchTermSearch:		 c.Bool("search-term-search"),
+				SearchTerm:				 c.String("term-to-search"),
 				Path:                    path,
 				StartDate:               c.String("start-date"),
 				EndDate:                 c.String("end-date"),
 			})
-			fmt.Println(len(logsFileGenerated), "files generated for logs of logStreams filtered for logGroup", logGroup)
-			for k := range logsFileGenerated {
-				fmt.Printf("logStreamName %s Location of file where its logs were stored at %s\n", k, logsFileGenerated[k][0])
+			fmt.Println(filter.GetLengthOfLogsFilesGenerated(logsFileGenerated), "files generated for logs of logStreams filtered for logGroup", logGroup)
+			for k, _ := range logsFileGenerated {
+				fmt.Printf("Location of files where logs of logStream %s were stored are the following\n", k)
+				for _, file := range logsFileGenerated[k] {
+					fmt.Printf("- %s\n", file)
+				}
 			}
 			return nil
 		},

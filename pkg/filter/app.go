@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -15,19 +16,21 @@ type App struct{}
 // FilterLogs creates a sessions of in aws and get all the logStreams for a specific logGroup
 func (a *App) FilterLogs(options *Options) map[string][]string {
 	checkArgsConditions(options.StartDate, options.EndDate, options.LogStreamFilterPosition)
-	fmt.Printf("Filtering logs for logGroup %s\n params: "+
-		"[aws-profile %s] [log-stream-filter: %s] [path: %s] "+
-		"[start-date: %s] [end-date: %s]\n",
-		options.LogGroup, options.AwsProfile, options.LogStreamFilter, options.Path, options.StartDate, options.EndDate)
+	printActionsToDoMessage(*options)
 	sess, _ := createAwsSession(options.AwsProfile, options.AwsRegion)
 	svc := cloudwatchlogs.New(sess)
 	logStreamOfLogGroup := getAllLogStreamsOfLogGroup(svc, options.LogGroup, options.LogStreamFilter, options.LogStreamFilterPosition)
-	logFilesGenerated := filterLogStreams(logStreamOfLogGroup, svc, options.LogGroup, options.StartDate, options.EndDate, options.Path)
+	logFilesGenerated := filterLogStreams(logStreamOfLogGroup, svc, options.LogGroup, options.SearchTermSearch, options.SearchTerm, options.StartDate, options.EndDate, options.Path)
 	return logFilesGenerated
 }
 
-func filterLogStreams(s []*logStreamGroups, svc *cloudwatchlogs.CloudWatchLogs, logGroup string, startDate string, endDate string, path string) map[string][]string {
-	fmt.Printf("Getting the logEvents for those logStreams whose last event was inserted between %s and %s\n", startDate, endDate)
+// filterLogStreams filter the logStreams of a group to
+// get only those you want to get based on the date range indicated
+func filterLogStreams(s []*logStreamGroups, svc *cloudwatchlogs.CloudWatchLogs, logGroup string,
+	searchTermSearch bool, searchTerm string,
+	startDate string, endDate string, path string) map[string][]string {
+	fmt.Printf("Getting the logEvents for those logStreams whose last event " +
+		"was inserted between %s and %s\n", startDate, endDate)
 	timestampFromStartDate := getTimeStampUnixFromDate(startDate)
 	timestampFromEndDate := getTimeStampUnixFromDate(endDate)
 	logsFilesSaved := make(map[string][]string)
@@ -37,23 +40,27 @@ func filterLogStreams(s []*logStreamGroups, svc *cloudwatchlogs.CloudWatchLogs, 
 			fmt.Println("LogStreamName:", item.LogStreamName)
 			fmt.Println("CreationTime:", getTimeInUTCFromMilliseconds(item.CreationTime))
 			fmt.Println("LastEventTime:", getTimeInUTCFromMilliseconds(item.LastEventTime))
-			logsFilesSaved = getLogEventsForLogStreamAndSaveInFile(logGroup, item.LogStreamName, svc, timestampFromStartDate, timestampFromEndDate, path, logsFilesSaved)
+			logsFilesSaved = getLogEventsForLogStreamAndSaveInFile(logGroup, item.LogStreamName, searchTermSearch, searchTerm, svc, timestampFromStartDate, timestampFromEndDate, path, logsFilesSaved)
 			fmt.Println("****************************************************************************************************")
 		}
 	}
 	return logsFilesSaved
 }
 
-func getLogEventsForLogStreamAndSaveInFile(logGroupName string, logStreamName string, svc *cloudwatchlogs.CloudWatchLogs, timeFrom int64, timestampFromEndDate int64, path string, logsFilesSaved map[string][]string) map[string][]string {
-	fmt.Printf("All log events are going to be retrieved in logGroup %s for logStream %s from time %d", logGroupName, logStreamName, timeFrom)
+// getLogEventsForLogStreamAndSaveInFile obtains the log messages of each
+// logStream , applying a filter if necessary and saving the result in a file
+func getLogEventsForLogStreamAndSaveInFile(logGroupName string, logStreamName string, searchTermSearch bool, searchTerm string,
+	svc *cloudwatchlogs.CloudWatchLogs, timeFrom int64, timestampFromEndDate int64, path string, logsFilesSaved map[string][]string) map[string][]string {
+	fmt.Printf("All log events are going to be retrieved in logGroup %s for logStream %s from time %d\n",
+		logGroupName, logStreamName, timeFrom)
 	resp, err := getLogEventsForLogStreamCallWithTime(logGroupName, logStreamName, timeFrom, svc)
 	if err != nil {
-		fmt.Println("Got error getting log events:")
+		fmt.Println("Got error getting log events")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	filenameStoreLogEvents := generateFileNameToStoreLogEvents(path, logStreamName)
-	fmt.Println("Event messages for stream", logStreamName, "in log group", logGroupName, "are going to be saved in file", filenameStoreLogEvents)
+	filenamesStoreLogEvents := generateFileNameToStoreLogEvents(path, logStreamName, searchTermSearch, searchTerm)
+	printFileStoreForLogStream(logStreamName, logGroupName, filenamesStoreLogEvents)
 	cont := true
 	gotToken := ""
 	nextToken := ""
@@ -62,7 +69,11 @@ func getLogEventsForLogStreamAndSaveInFile(logGroupName string, logStreamName st
 			cont = false
 			break
 		}
-		cont = saveLogsToFile(filenameStoreLogEvents, logStreamName, resp, timestampFromEndDate, cont)
+		if searchTermSearch {
+			cont = saveLogsToFileFiltered(filenamesStoreLogEvents, resp, timestampFromEndDate, cont, searchTerm)
+		} else {
+			cont = saveLogsToFile(filenamesStoreLogEvents[0], resp, timestampFromEndDate, cont)
+		}
 		if cont {
 			gotToken = nextToken
 			nextToken = *resp.NextForwardToken
@@ -73,22 +84,38 @@ func getLogEventsForLogStreamAndSaveInFile(logGroupName string, logStreamName st
 			}
 		}
 	}
-	logsFilesSaved[logStreamName] = append(logsFilesSaved[logStreamName], filenameStoreLogEvents)
+	logsFilesSaved[logStreamName] = append(logsFilesSaved[logStreamName], filenamesStoreLogEvents...)
 	return logsFilesSaved
 }
 
-func saveLogsToFile(filenameW string, logStreamName string, resp *cloudwatchlogs.GetLogEventsOutput, timestampFromEndDate int64, cont bool) bool {
-	f, err := os.OpenFile(filenameW, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	// Remove logging prefix for redirect the output without log date format
-	log.SetFlags(0)
-	// Redirect log to file for store eventLogs of each specific logStreamGroup
-	log.SetOutput(f)
+// saveLogsToFile scrolls through all the log messages obtained in a call to
+// the sdk obtained to include it in the list of logs to be returned or not
+func saveLogsToFile(filenameW string, resp *cloudwatchlogs.GetLogEventsOutput, timestampFromEndDate int64, cont bool) bool {
 	for _, event := range resp.Events {
 		if *event.IngestionTime <= timestampFromEndDate {
-			log.Println(*event.Message)
+			saveLogMessageToFile(filenameW, *event.Message)
+		} else {
+			cont = false
+			break
+		}
+	}
+	return cont
+}
+
+// saveLogsToFileFiltered scrolls through all the log messages obtained
+// in a call to the sdk applying the filter indicated on each message
+// obtained to include it in the list of logs to be returned or not
+func saveLogsToFileFiltered(filenames []string, resp *cloudwatchlogs.GetLogEventsOutput,
+	timestampFromEndDate int64, cont bool, searchTerm string) bool {
+	searchTerms := strings.Split(searchTerm,"|")
+	for _, event := range resp.Events {
+		if *event.IngestionTime <= timestampFromEndDate {
+			for i, searchT:= range searchTerms {
+				re := regexp.MustCompile(searchT)
+				if re.MatchString(*event.Message) {
+					saveLogMessageToFile(filenames[i], *event.Message)
+				}
+			}
 		} else {
 			cont = false
 			break
@@ -99,29 +126,14 @@ func saveLogsToFile(filenameW string, logStreamName string, resp *cloudwatchlogs
 	return cont
 }
 
-// CheckErr checks if given error is not nil and exit program with signal 1
-func CheckErr(e error, errString string) {
-	if e != nil {
-		fmt.Print(errString)
-		log.Fatal(e)
-	}
-}
-
-func generateFileNameToStoreLogEvents(path string, logStreamName string) string {
-	return path + "/" + strings.ReplaceAll(logStreamName, "/", "_")
-}
-
-func checkArgsConditions(startDate string, endDate string, logStreamPosition int) bool {
-	_, err := CheckDataBoundariesStr(startDate, endDate)
+// saveLogsToFile takes care of saving all events in the specified
+// string slice in the received file as a parameter
+func saveLogMessageToFile(pathFileName string, logMessage string) error {
+	file, err := os.OpenFile(pathFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer file.Close()
 	if err != nil {
-		log.Fatalf("Error comparing startDate and endDate dates %s", err)
+		return err
 	}
-	return inBetween(logStreamPosition, 1, 3)
-}
-
-func inBetween(i, min, max int) bool {
-	if (i >= min) && (i <= max) {
-		return true
-	}
-	return false
+	file.WriteString(logMessage + "\n")
+	return nil
 }

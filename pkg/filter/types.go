@@ -18,6 +18,12 @@ type Options struct {
 	// Position to apply log-stream-filter on logStreams of LogGroup (normally 1: logStreamPrefix, 2: service name, 3: service instance identifier)
 	LogStreamFilterPosition int
 
+	// Indicates if a specific term should be searched for in the logStreams
+	SearchTermSearch bool
+
+	// Term used to filter each of the messages found in the logStreams
+	SearchTerm string
+
 	// Path where to store the logs
 	Path string
 
@@ -28,7 +34,7 @@ type Options struct {
 	EndDate string
 }
 
-//LogStreamGrups contains information about each LogStreamGroup
+// LogStreamGrups contains information about each LogStreamGroup
 type logStreamGroups struct {
 	CreationTime  int64
 	LastEventTime int64
